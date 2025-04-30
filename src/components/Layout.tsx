@@ -1,6 +1,7 @@
 
 import { ReactNode } from "react";
 import { Navbar } from "@/components/Navbar";
+import { motion } from "framer-motion";
 
 interface LayoutProps {
   children: ReactNode;
@@ -8,13 +9,34 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <Navbar />
-      <main className="flex-1 container mx-auto p-6">
+      <motion.main 
+        className="flex-1 container mx-auto p-6"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
         {children}
-      </main>
-      <footer className="bg-gray-50 border-t py-4 px-6 text-center text-sm text-gray-500">
-        ResuMatch &copy; {new Date().getFullYear()} - Smart Resume Selection Platform
+      </motion.main>
+      <footer className="bg-white/80 backdrop-blur-sm border-t py-4 px-6 text-center text-sm text-gray-500">
+        <div className="container mx-auto">
+          <motion.div 
+            className="flex flex-col md:flex-row justify-between items-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="mb-2 md:mb-0">
+              ResuMatch &copy; {new Date().getFullYear()} - Smart Resume Selection Platform
+            </div>
+            <div className="flex space-x-4">
+              <a href="#" className="hover:text-brand-blue transition-colors">Terms</a>
+              <a href="#" className="hover:text-brand-blue transition-colors">Privacy</a>
+              <a href="#" className="hover:text-brand-blue transition-colors">Support</a>
+            </div>
+          </motion.div>
+        </div>
       </footer>
     </div>
   );
