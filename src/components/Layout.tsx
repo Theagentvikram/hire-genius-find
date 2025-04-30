@@ -9,7 +9,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#0a0a1b] via-[#1a1a3a] to-[#32235c]">
       <Navbar />
       <motion.main 
         className="flex-1 container mx-auto p-6"
@@ -19,7 +19,7 @@ export function Layout({ children }: LayoutProps) {
       >
         {children}
       </motion.main>
-      <footer className="bg-white/80 backdrop-blur-sm border-t py-4 px-6 text-center text-sm text-gray-500">
+      <footer className="backdrop-blur-sm border-t border-white/10 py-4 px-6 text-center text-sm text-gray-300">
         <div className="container mx-auto">
           <motion.div 
             className="flex flex-col md:flex-row justify-between items-center"
