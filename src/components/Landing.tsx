@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { FileText, Search, Upload, UserCheck, Eye, Shield, Code } from "lucide-react";
+import { FileText, Search, Upload, UserCheck, Eye, Shield, Code, Zap, Database, Cpu } from "lucide-react";
 import { motion } from "framer-motion";
 
 const container = {
@@ -73,12 +73,14 @@ export function Landing() {
           transition={{ delay: 0.9, duration: 0.7 }}
         >
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg blur-xl opacity-30"></div>
-          <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black/20 backdrop-blur-sm p-1 shadow-2xl">
-            <img 
-              src="/lovable-uploads/9d9eae5c-b70d-4bdf-9ea9-831c293042a3.png" 
-              alt="Resume Matcher Interface"
-              className="w-full rounded object-cover shadow-lg" 
-            />
+          <div className="relative overflow-hidden rounded-lg border border-white/10 bg-black/20 backdrop-blur-sm p-6 shadow-2xl">
+            <div className="flex flex-col items-center">
+              <Zap className="h-12 w-12 text-blue-400 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">AI-Powered Resume Matching</h3>
+              <p className="text-gray-300 text-center">
+                Our advanced algorithms analyze resumes to identify the perfect candidates based on your requirements.
+              </p>
+            </div>
           </div>
         </motion.div>
       </section>
@@ -199,11 +201,33 @@ export function Landing() {
               viewport={{ once: true }}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-500 rounded-lg blur-xl opacity-30"></div>
-              <img 
-                src="/lovable-uploads/21fde6cf-3ca9-4508-a781-92afa86637fb.png" 
-                alt="Resume Matcher Interface"
-                className="relative rounded-lg shadow-2xl border border-white/10 z-10" 
-              />
+              <div className="relative rounded-lg shadow-2xl border border-white/10 z-10 bg-black/20 backdrop-blur-sm p-6">
+                <div className="flex flex-col items-center">
+                  <Database className="h-12 w-12 text-purple-400 mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">Advanced Analytics Dashboard</h3>
+                  <p className="text-gray-300 text-center">
+                    Get insights into candidate pools, skill distributions, and match quality with our interactive analytics.
+                  </p>
+                  <div className="mt-4 grid grid-cols-2 gap-3 w-full">
+                    <div className="bg-white/5 p-3 rounded border border-white/10">
+                      <div className="text-2xl font-bold text-blue-300">94%</div>
+                      <div className="text-xs text-gray-400">Match Accuracy</div>
+                    </div>
+                    <div className="bg-white/5 p-3 rounded border border-white/10">
+                      <div className="text-2xl font-bold text-purple-300">30s</div>
+                      <div className="text-xs text-gray-400">Processing Time</div>
+                    </div>
+                    <div className="bg-white/5 p-3 rounded border border-white/10">
+                      <div className="text-2xl font-bold text-green-300">500+</div>
+                      <div className="text-xs text-gray-400">Skills Indexed</div>
+                    </div>
+                    <div className="bg-white/5 p-3 rounded border border-white/10">
+                      <div className="text-2xl font-bold text-orange-300">10x</div>
+                      <div className="text-xs text-gray-400">Faster Hiring</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           </motion.div>
         </div>

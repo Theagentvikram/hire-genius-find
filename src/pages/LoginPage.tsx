@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FileText, CheckCircle } from "lucide-react";
+import { FileText, CheckCircle, Shield, Zap, UserCheck } from "lucide-react";
 
 const LoginPage = () => {
   const { isAuthenticated } = useAuth();
@@ -80,7 +80,7 @@ const LoginPage = () => {
                   transition={{ delay: 0.6, duration: 0.5 }}
                 >
                   <div className="bg-blue-500/20 p-2 rounded-full mr-3">
-                    <CheckCircle className="h-5 w-5 text-blue-400" />
+                    <Zap className="h-5 w-5 text-blue-400" />
                   </div>
                   <p className="text-gray-300">AI-powered matching technology</p>
                 </motion.div>
@@ -92,9 +92,21 @@ const LoginPage = () => {
                   transition={{ delay: 0.7, duration: 0.5 }}
                 >
                   <div className="bg-blue-500/20 p-2 rounded-full mr-3">
-                    <CheckCircle className="h-5 w-5 text-blue-400" />
+                    <UserCheck className="h-5 w-5 text-blue-400" />
                   </div>
                   <p className="text-gray-300">Save hours on candidate screening</p>
+                </motion.div>
+
+                <motion.div 
+                  className="flex items-center"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.8, duration: 0.5 }}
+                >
+                  <div className="bg-blue-500/20 p-2 rounded-full mr-3">
+                    <Shield className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <p className="text-gray-300">Secure and private resume handling</p>
                 </motion.div>
               </div>
             </motion.div>
