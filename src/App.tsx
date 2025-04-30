@@ -11,8 +11,11 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 // Pages
 import Index from "./pages/Index";
 import LoginPage from "./pages/LoginPage";
+import RecruiterLoginPage from "./pages/RecruiterLoginPage";
+import UserLoginPage from "./pages/UserLoginPage";
 import UploadPage from "./pages/UploadPage";
 import SearchPage from "./pages/SearchPage";
+import UploadStatusPage from "./pages/UploadStatusPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,11 +31,21 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/recruiter-login" element={<RecruiterLoginPage />} />
+              <Route path="/user-login" element={<UserLoginPage />} />
               <Route 
                 path="/upload" 
                 element={
-                  <ProtectedRoute requiredRole="admin">
+                  <ProtectedRoute>
                     <UploadPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/upload-status" 
+                element={
+                  <ProtectedRoute>
+                    <UploadStatusPage />
                   </ProtectedRoute>
                 } 
               />
