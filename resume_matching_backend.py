@@ -1,0 +1,287 @@
+# Resume Matching Backend with Mistral-7B-Instruct
+
+# Step 1: Install Dependencies
+!pip install flask flask-cors pyngrok llama-cpp-python sentence-transformers PyMuPDF
+
+# Step 2: Import Libraries and Set Up Flask App
+import os
+import re
+import json
+import numpy as np
+import fitz  # PyMuPDF
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from pyngrok import ngrok
+from llama_cpp import Llama
+from sentence_transformers import SentenceTransformer
+from werkzeug.utils import secure_filename
+import tempfile
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Initialize Flask app
+app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
+
+# Create a temporary directory for uploaded files
+UPLOAD_FOLDER = tempfile.mkdtemp()
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+print(f'Temporary upload folder created at: {UPLOAD_FOLDER}')
+
+# Step 3: Load the Mistral Model and Sentence Transformer
+# Load the Mistral model
+MODEL_PATH = '/content/mistral-7b-instruct-v0.1.Q4_0.gguf'
+print(f'Loading Mistral model from {MODEL_PATH}...')
+llm = Llama(model_path=MODEL_PATH, n_ctx=4096, n_gpu_layers=-1)
+print('Mistral model loaded successfully!')
+
+# Load the sentence transformer model for embeddings
+print('Loading sentence transformer model...')
+embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+print('Sentence transformer model loaded successfully!')
+
+# In-memory storage for resumes
+resumes_db = []
+
+# Step 4: Helper Functions for Text Processing and LLM Inference
+def extract_text_from_pdf(pdf_path):
+    """Extract text from a PDF file using PyMuPDF."""
+    text = ""
+    try:
+        doc = fitz.open(pdf_path)
+        for page in doc:
+            text += page.get_text()
+        return text
+    except Exception as e:
+        print(f'Error extracting text from PDF: {e}')
+        return ""
+
+def extract_skills(text):
+    """Extract skills from resume text using regex patterns."""
+    # Common programming languages, frameworks, and tools
+    skill_patterns = [
+        r'\b(Python|Java|JavaScript|C\+\+|C#|Ruby|PHP|Swift|Kotlin|Go|Rust|SQL|HTML|CSS)\b',
+        r'\b(React|Angular|Vue|Node\.js|Express|Django|Flask|Spring|TensorFlow|PyTorch|Pandas|NumPy)\b',
+        r'\b(AWS|Azure|GCP|Docker|Kubernetes|Git|CI/CD|REST|GraphQL|Agile|Scrum|DevOps)\b',
+        r'\b(Excel|Word|PowerPoint|Tableau|Power BI|JIRA|Confluence|Photoshop|Illustrator)\b',
+        r'\b(Machine Learning|Deep Learning|NLP|Computer Vision|Data Science|Big Data|Analytics)\b'
+    ]
+    
+    skills = []
+    for pattern in skill_patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        skills.extend([match.strip() for match in matches])
+    
+    # Remove duplicates and sort
+    return sorted(list(set(skills)))
+
+def extract_experience(text):
+    """Extract years of experience from resume text."""
+    # Look for patterns like "X years of experience" or "X+ years"
+    experience_patterns = [
+        r'(\d+)\+?\s+years?\s+(?:of\s+)?experience',
+        r'experience\s+(?:of\s+)?(\d+)\+?\s+years'
+    ]
+    
+    years = []
+    for pattern in experience_patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        years.extend([int(match) for match in matches])
+    
+    return max(years) if years else 0
+
+def extract_education(text):
+    """Extract education information from resume text."""
+    education_patterns = [
+        r'\b(Bachelor|BS|B\.S\.|BA|B\.A\.|Undergraduate)\s+(?:of|in|degree)?\s+([^,\.]*)',
+        r'\b(Master|MS|M\.S\.|MA|M\.A\.|Graduate)\s+(?:of|in|degree)?\s+([^,\.]*)',
+        r'\b(PhD|Ph\.D\.|Doctorate|Doctoral)\s+(?:of|in|degree)?\s+([^,\.]*)'
+    ]
+    
+    education = []
+    for pattern in education_patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        for match in matches:
+            degree_type = match[0].strip()
+            field = match[1].strip() if len(match) > 1 else ''
+            education.append(f'{degree_type} in {field}')
+    
+    return education
+
+def get_highest_education_level(education_list):
+    """Determine the highest level of education from the extracted education info."""
+    if not education_list:
+        return 'Unknown'
+        
+    if any(re.search(r'PhD|Ph\.D\.|Doctorate|Doctoral', edu, re.IGNORECASE) for edu in education_list):
+        return 'PhD'
+    elif any(re.search(r'Master|MS|M\.S\.|MA|M\.A\.|Graduate', edu, re.IGNORECASE) for edu in education_list):
+        return 'Master\'s'
+    elif any(re.search(r'Bachelor|BS|B\.S\.|BA|B\.A\.|Undergraduate', edu, re.IGNORECASE) for edu in education_list):
+        return 'Bachelor\'s'
+    else:
+        return 'Other'
+
+def generate_llm_prompt(text, is_query=False):
+    """Generate a prompt for the LLM based on whether it's a resume or a query."""
+    if is_query:
+        return f"""<s>[INST] You are a helpful AI assistant that helps recruiters find matching candidates. \n\nHere is a job requirement or query from a recruiter: \n\n{text}\n\nSummarize this job requirement or query in a concise paragraph that captures the key skills, experience level, and qualifications being sought. Focus on technical requirements and job responsibilities. [/INST]</s>"""
+    else:
+        return f"""<s>[INST] You are a helpful AI assistant that specializes in analyzing resumes. \n\nHere is the text extracted from a resume: \n\n{text[:3000]}\n\nCreate a concise professional summary (maximum 150 words) that highlights this candidate's skills, experience, and qualifications. Focus on technical skills, years of experience, and educational background. [/INST]</s>"""
+
+def get_llm_summary(text, is_query=False):
+    """Get a summary from the LLM based on the provided text."""
+    prompt = generate_llm_prompt(text, is_query)
+    
+    # Generate response from the LLM
+    response = llm(prompt, max_tokens=512, temperature=0.1, echo=False)
+    
+    # Extract the generated text
+    summary = response['choices'][0]['text'].strip()
+    return summary
+
+def generate_embedding(text):
+    """Generate an embedding for the given text using sentence-transformers."""
+    return embedding_model.encode(text)
+
+def calculate_similarity(embedding1, embedding2):
+    """Calculate cosine similarity between two embeddings."""
+    return cosine_similarity([embedding1], [embedding2])[0][0]
+
+# Step 5: Define Flask API Routes
+@app.route('/upload', methods=['POST'])
+def upload_resume():
+    """API endpoint to upload and process a resume."""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+        
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+        
+    if file and file.filename.lower().endswith('.pdf'):
+        # Save the file temporarily
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        
+        try:
+            # Extract text from PDF
+            text = extract_text_from_pdf(file_path)
+            
+            # Extract information from the text
+            skills = extract_skills(text)
+            experience_years = extract_experience(text)
+            education_info = extract_education(text)
+            education_level = get_highest_education_level(education_info)
+            
+            # Generate summary using LLM
+            summary = get_llm_summary(text)
+            
+            # Generate embedding for the summary
+            embedding = generate_embedding(summary).tolist()
+            
+            # Create resume object
+            resume = {
+                'id': len(resumes_db) + 1,
+                'filename': filename,
+                'originalName': file.filename,
+                'uploadDate': os.path.getctime(file_path),
+                'summary': summary,
+                'skills': skills,
+                'experience': experience_years,
+                'educationLevel': education_level,
+                'embedding': embedding
+            }
+            
+            # Add to in-memory database
+            resumes_db.append(resume)
+            
+            # Return success response (without the embedding)
+            response_data = resume.copy()
+            del response_data['embedding']  # Remove embedding from response
+            return jsonify(response_data), 200
+            
+        except Exception as e:
+            return jsonify({'error': f'Error processing resume: {str(e)}'}), 500
+        finally:
+            # Clean up the temporary file
+            if os.path.exists(file_path):
+                os.remove(file_path)
+    else:
+        return jsonify({'error': 'File must be a PDF'}), 400
+
+@app.route('/upload/all', methods=['GET'])
+def get_all_resumes():
+    """API endpoint to get all uploaded resumes."""
+    try:
+        # Return all resumes without embeddings
+        results = []
+        for resume in resumes_db:
+            resume_copy = resume.copy()
+            if 'embedding' in resume_copy:
+                del resume_copy['embedding']  # Remove embedding from response
+            results.append(resume_copy)
+        
+        return jsonify(results), 200
+    except Exception as e:
+        return jsonify({'error': f'Error fetching resumes: {str(e)}'}), 500
+
+@app.route('/search', methods=['POST'])
+def search_resumes():
+    """API endpoint to search for matching resumes based on a query."""
+    data = request.json
+    if not data or 'query' not in data:
+        return jsonify({'error': 'No query provided'}), 400
+        
+    query = data['query']
+    
+    try:
+        # Generate summary for the query
+        query_summary = get_llm_summary(query, is_query=True)
+        
+        # Generate embedding for the query summary
+        query_embedding = generate_embedding(query_summary)
+        
+        # Calculate similarity scores for all resumes
+        results = []
+        for resume in resumes_db:
+            similarity = calculate_similarity(query_embedding, resume['embedding'])
+            match_score = int(similarity * 100)  # Convert to percentage
+            
+            # Create result object
+            result = {
+                'resume': {
+                    'id': resume['id'],
+                    'filename': resume['filename'],
+                    'originalName': resume['originalName'],
+                    'uploadDate': resume['uploadDate'],
+                    'summary': resume['summary'],
+                    'skills': resume['skills'],
+                    'experience': resume['experience'],
+                    'educationLevel': resume['educationLevel']
+                },
+                'matchScore': match_score,
+                'matchReason': f"Similarity score: {match_score}%. Skills: {', '.join(resume['skills'][:3] if resume['skills'] else [])}"
+            }
+            results.append(result)
+        
+        # Sort results by match score (descending) and take top 5
+        results = sorted(results, key=lambda x: x['matchScore'], reverse=True)[:5]
+        
+        return jsonify(results), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'Error searching resumes: {str(e)}'}), 500
+
+# Step 6: Start the Flask Server with ngrok
+# Set up ngrok authentication
+ngrok.set_auth_token('2wjEoSouFgLoNUD9spsG1UYiiTe_7YWnYLwUmWvHPAm8JcpC7')  # Using provided auth token
+
+# Start ngrok tunnel to expose the app
+public_url = ngrok.connect(5000)
+print(f'\n\n* Backend is now publicly available at: {public_url}\n')
+print(f'* Update your frontend config at src/config/api.ts with this URL\n')
+
+# Start the Flask app
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)

@@ -6,16 +6,16 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 const UploadPage = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, userType } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/login");
-    } else if (user && user.role !== "admin") {
+    } else if (userType !== "applicant") {
       navigate("/search");
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, userType, navigate]);
 
   return (
     <Layout>

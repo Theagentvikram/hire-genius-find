@@ -11,6 +11,10 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, requiredRole, requiredUserType }: ProtectedRouteProps) {
   const { isAuthenticated, user, userType } = useAuth();
+  
+  // Get the current path to determine if we're on the upload page
+  const currentPath = window.location.pathname;
+  const isUploadPage = currentPath === "/upload";
 
   if (!isAuthenticated) {
     // Redirect to appropriate login page based on required user type
@@ -26,6 +30,11 @@ export function ProtectedRoute({ children, requiredRole, requiredUserType }: Pro
   // Check role if required
   if (requiredRole && user && user.role !== requiredRole) {
     return <Navigate to="/search" replace />;
+  }
+
+  // Special case for upload page - allow applicant users to access it
+  if (isUploadPage && userType === "applicant") {
+    return <>{children}</>;
   }
 
   // Check user type if required

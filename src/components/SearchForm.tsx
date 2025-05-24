@@ -5,14 +5,19 @@ import { Input } from "@/components/ui/input";
 import { useResumes } from "@/contexts/ResumeContext";
 import { Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { searchResumes } from "@/services/api";
+import { useToast } from "@/components/ui/use-toast";
 
 export function SearchForm() {
   const [query, setQuery] = useState("");
-  const { search, isSearching } = useResumes();
+  const [isSearching, setIsSearching] = useState(false);
+  const { search, setSearchResults } = useResumes();
+  const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
+      setIsSearching(true);
       search(query);
     }
   };
@@ -26,6 +31,7 @@ export function SearchForm() {
 
   const handleSampleQuery = (sampleQuery: string) => {
     setQuery(sampleQuery);
+    setIsSearching(true);
     search(sampleQuery);
   };
 

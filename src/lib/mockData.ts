@@ -15,6 +15,12 @@ export const mockUsers: User[] = [
     username: "admin",
     password: "admin123", // Never do this in real apps!
     role: "admin",
+  },
+  {
+    id: "3",
+    username: "user",
+    password: "password123", // Never do this in real apps!
+    role: "applicant",
   }
 ];
 

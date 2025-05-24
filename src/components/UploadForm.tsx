@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useResumes } from "@/contexts/ResumeContext";
-import { saveResume } from "@/lib/mockData";
+import { uploadResume } from "@/services/api";
 import { FileText, Upload } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Progress } from "@/components/ui/progress";
@@ -24,24 +24,14 @@ export function UploadForm() {
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      
       // Check if file is PDF
       if (selectedFile.type !== "application/pdf") {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload a PDF file.",
-          variant: "destructive",
-        });
+        toast({ title: "Invalid file type", description: "Please upload a PDF file." });
         return;
       }
-      
       setFile(selectedFile);
-      
-      // In a real app, this would use an LLM to generate a summary
-      // For demo, we'll generate a mock summary
-      const skills = ["JavaScript", "Python", "React", "Node.js", "Data Analysis"];
-      const randomSkills = skills.sort(() => 0.5 - Math.random()).slice(0, 3);
-      setSummary(`Recent graduate with experience in ${randomSkills.join(", ")}. Passionate about technology and eager to learn new skills.`);
+      // Clear any previous summary
+      setSummary("");
     }
   };
 
@@ -80,7 +70,8 @@ export function UploadForm() {
     }, 100);
     
     try {
-      const resume = await saveResume(file, summary, category);
+      // Use the real API service instead of mock data
+      const resume = await uploadResume(file, category);
       addResume(resume);
       
       // Set to 100% when complete

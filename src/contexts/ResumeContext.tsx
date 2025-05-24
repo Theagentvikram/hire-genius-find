@@ -1,7 +1,7 @@
 
-import { createContext, useState, useContext, ReactNode } from "react";
+import { createContext, useState, useContext, ReactNode, useEffect } from "react";
 import { Resume, SearchResult } from "@/types";
-import { mockResumes, searchResumes } from "@/lib/mockData";
+import { searchResumes } from "@/services/api";
 import { useToast } from "@/components/ui/use-toast";
 
 interface ResumeContextType {
@@ -19,7 +19,7 @@ interface ResumeContextType {
 const ResumeContext = createContext<ResumeContextType | undefined>(undefined);
 
 export function ResumeProvider({ children }: { children: ReactNode }) {
-  const [resumes, setResumes] = useState<Resume[]>(mockResumes);
+  const [resumes, setResumes] = useState<Resume[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,6 +45,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
     setIsSearching(true);
     setSearchQuery(query);
     try {
+      // Use the real API service for searching
       const results = await searchResumes(query);
       setSearchResults(results);
       
